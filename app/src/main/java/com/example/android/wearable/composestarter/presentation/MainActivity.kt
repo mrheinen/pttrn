@@ -61,6 +61,7 @@ import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Button
 import androidx.wear.compose.material.ButtonDefaults
+import androidx.compose.ui.graphics.Color
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
@@ -123,41 +124,9 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun WearApp(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
-    val navController = rememberSwipeDismissableNavController()
-
     WearAppTheme {
         AppScaffold {
-            SwipeDismissableNavHost(navController = navController, startDestination = "menu") {
-                composable("menu") {
-                    GreetingScreen(
-                        "Android",
-                        onShowList = { navController.navigate("list") }
-                    )
-                }
-                composable("list") {
-                    ListScreen(vibrator, onKeepScreenOn)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun GreetingScreen(greetingName: String, onShowList: () -> Unit) {
-    val scrollState = rememberScrollState()
-
-    /* If you have enough items in your list, use [ScalingLazyColumn] which is an optimized
-     * version of LazyColumn for wear devices with some added features. For more information,
-     * see d.android.com/wear/compose.
-     */
-    ScreenScaffold(scrollState = scrollState) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(16.dp)
-        ) {
-            Greeting(greetingName = greetingName)
-            Chip(label = "Start", onClick = onShowList)
+            ListScreen(vibrator, onKeepScreenOn)
         }
     }
 }
@@ -181,15 +150,11 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
         listOf("⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"),
         listOf("⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓"),
         listOf(
-            "[    ]", "[=   ]", "[==  ]", "[=== ]", "[====]",
-            "[ ===]", "[  ==]", "[   =]", "[    ]", "[   =]",
-            "[  ==]", "[ ===]", "[====]", "[=== ]", "[==  ]", "[=   ]"
-        ),
-        listOf(
             "( ●    )", "(  ●   )", "(   ●  )", "(    ● )", "(     ●)",
             "(    ● )", "(   ●  )", "(  ●   )", "( ●    )", "(●     )"
         ),
-        listOf("∙∙∙", "●∙∙", "∙●∙", "∙∙●", "∙∙∙", "∙∙●", "∙●∙", "●∙∙"),
+        listOf("▸▹▹▹▹", "▹▸▹▹▹", "▹▹▸▹▹", "▹▹▹▸▹", "▹▹▹▹▸"),
+        listOf("_", "_", "_", "-", "`", "`", "'", "´", "-", "_", "_", "_")
     )
 
     // Function to get next random spinner type different from last
@@ -307,7 +272,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                             .padding(16.dp),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.title1,
-                        color = if (isMotorActive) androidx.compose.ui.graphics.Color.Green else MaterialTheme.colors.onSurface
+                        color = if (isMotorActive) Color(0xFF98971a) else Color(0xFF98971a).copy(alpha = 0.6f)
                     )
                 }
                 item {
@@ -433,23 +398,4 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             }
         }
     }
-}
-
-@Composable
-fun Greeting(greetingName: String) {
-    Text(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        textAlign = TextAlign.Center,
-        color = MaterialTheme.colors.primary,
-        text = stringResource(R.string.hello_world, greetingName)
-    )
-}
-
-@WearPreviewDevices
-@WearPreviewFontScales
-@Composable
-fun GreetingScreenPreview() {
-    GreetingScreen(greetingName = "Preview", onShowList = {})
 }
