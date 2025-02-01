@@ -60,6 +60,7 @@ import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.items
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
 import androidx.wear.compose.material.Button
+import androidx.wear.compose.material.ButtonDefaults
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.Text
@@ -164,6 +165,7 @@ fun GreetingScreen(greetingName: String, onShowList: () -> Unit) {
 @Composable
 fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
     var isVibrating by remember { mutableStateOf(false) }
+    var isMotorActive by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var vibrationJob by remember { mutableStateOf<Job?>(null) }
     var spinnerIndex by remember { mutableStateOf(0) }
@@ -304,7 +306,8 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                             .fillMaxWidth()
                             .padding(16.dp),
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.title1
+                        style = MaterialTheme.typography.title1,
+                        color = if (isMotorActive) androidx.compose.ui.graphics.Color.Green else MaterialTheme.colors.onSurface
                     )
                 }
                 item {
@@ -337,13 +340,16 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                                                     (amplitude * intensityMultiplier)
                                                         .toInt()
                                                         .coerceIn(1, 255)
+                                                isMotorActive = true
                                                 vibrator.vibrate(
                                                     VibrationEffect.createOneShot(
                                                         duration,
                                                         adjustedAmplitude
                                                     )
                                                 )
-                                                delay(duration + 100) // Add a small gap between vibrations
+                                                delay(duration)  // Wait for the vibration to complete
+                                                isMotorActive = false
+                                                delay(100) // Add a small gap between vibrations
                                             }
                                             delay(500) // Pause before repeating the sequence
                                         }
@@ -355,7 +361,11 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                                     onKeepScreenOn(false)
                                 }
                             },
-                            modifier = Modifier.size(50.dp)
+                            modifier = Modifier.size(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = androidx.compose.ui.graphics.Color(0xFFb57614),
+                                contentColor = androidx.compose.ui.graphics.Color.White
+                            )
                         ) {
                             Icon(
                                 imageVector = if (isVibrating) Icons.Default.Close else Icons.Default.PlayArrow,
@@ -383,20 +393,27 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                                                     (amplitude * intensityMultiplier)
                                                         .toInt()
                                                         .coerceIn(1, 255)
+                                                isMotorActive = true
                                                 vibrator.vibrate(
                                                     VibrationEffect.createOneShot(
                                                         duration,
                                                         adjustedAmplitude
                                                     )
                                                 )
-                                                delay(duration + 100)
+                                                delay(duration)  // Wait for the vibration to complete
+                                                isMotorActive = false
+                                                delay(100) // Add a small gap between vibrations
                                             }
                                             delay(500)
                                         }
                                     }
                                 }
                             },
-                            modifier = Modifier.size(50.dp)
+                            modifier = Modifier.size(50.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                backgroundColor = androidx.compose.ui.graphics.Color(0xFFb57614),
+                                contentColor = androidx.compose.ui.graphics.Color.White
+                            )
                         ) {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.ArrowForward,
