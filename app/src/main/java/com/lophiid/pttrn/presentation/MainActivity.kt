@@ -23,9 +23,14 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.view.GestureDetector
+import android.view.GestureDetector.SimpleOnGestureListener
+import android.view.MotionEvent
+import android.view.Window
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -66,9 +71,13 @@ import androidx.wear.compose.material.TimeText
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.compose.layout.AppScaffold
 import com.lophiid.pttrn.presentation.theme.WearAppTheme
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlin.math.abs
 
 /**
  * Simple "Hello, World" app meant as a starting point for a new project using Compose for Wear OS.
@@ -83,9 +92,83 @@ import kotlinx.coroutines.launch
  */
 class MainActivity : ComponentActivity() {
     private lateinit var vibrator: Vibrator
+    private lateinit var gestureDetector: GestureDetector
+    private var currentPatternIndex by mutableStateOf(0)
+    private var coroutineScope = CoroutineScope(Dispatchers.Main + Job())
+
+    // Define vibration patterns with names
+    private val vibrationPatterns = listOf(
+        "One" to listOf( // Pattern One - Rhythmic
+            Pair(100L, 50), // Quick, light tap
+            Pair(200L, 120), // Medium, moderate intensity
+            Pair(300L, 200), // Long, strong vibration
+            Pair(50L, 255), // Very short, maximum intensity
+            Pair(400L, 80), // Extended, gentle vibration
+            Pair(150L, 180), // Short, strong pulse
+            Pair(250L, 100), // Medium, moderate pulse
+            Pair(500L, 150), // Very long, medium-strong
+            Pair(75L, 220), // Quick, very strong
+            Pair(350L, 70), // Long, gentle
+        ),
+        "Morse" to listOf( // Pattern Two - Morse Code Style
+            Pair(200L, 255), // Long strong
+            Pair(100L, 150), // Short medium
+            Pair(200L, 255), // Long strong
+            Pair(100L, 150), // Short medium
+            Pair(50L, 100), // Quick light
+            Pair(50L, 100), // Quick light
+            Pair(50L, 100), // Quick light
+            Pair(200L, 255), // Long strong
+            Pair(100L, 150), // Short medium
+            Pair(200L, 255), // Long strong
+        ),
+        "Twinkle" to listOf( // Pattern Three - Twinkle Twinkle Little Star
+            Pair(200L, 200), // Twin-
+            Pair(100L, 150), // -kle
+            Pair(200L, 200), // twin-
+            Pair(100L, 150), // -kle
+            Pair(200L, 180), // lit-
+            Pair(100L, 130), // -tle
+            Pair(400L, 255), // star
+        ),
+        "Dogs" to listOf( // Pattern Four - Who Let The Dogs Out
+            Pair(200L, 255), // WHO
+            Pair(150L, 200), // LET
+            Pair(150L, 200), // THE
+            Pair(400L, 255), // DOGS
+            Pair(400L, 200), // OUT
+            Pair(150L, 255), // WOOF
+            Pair(150L, 255), // WOOF
+            Pair(150L, 255), // WOOF
+            Pair(150L, 255), // WOOF
+        ),
+        "Chaos" to listOf( // Pattern Five - Random Chaos
+            Pair(50L, 255), // Sudden strong zap
+            Pair(300L, 80), // Long gentle hum
+            Pair(25L, 200), // Tiny medium pulse
+            Pair(400L, 255), // Extended strong buzz
+            Pair(75L, 130), // Quick light tap
+            Pair(200L, 180), // Medium balanced pulse
+            Pair(150L, 255), // Short strong burst
+            Pair(350L, 100), // Long soft wave
+            Pair(100L, 220), // Medium strong pop
+            Pair(250L, 160), // Moderate balanced pulse
+            Pair(125L, 90), // Short gentle touch
+            Pair(450L, 240), // Final strong fade
+        ),
+    )
+
+    // Function to provide vibration feedback for pattern switch
+    private suspend fun providePatternSwitchFeedback() {
+        repeat(3) {
+            vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
+            delay(250) // Wait between vibrations
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
             vibratorManager.defaultVibrator
@@ -94,8 +177,58 @@ class MainActivity : ComponentActivity() {
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         }
 
+        // Initialize the gesture detector
+        gestureDetector = GestureDetector(this, object : SimpleOnGestureListener() {
+            override fun onFling(
+                e1: MotionEvent?,
+                e2: MotionEvent,
+                velocityX: Float,
+                velocityY: Float
+            ): Boolean {
+                // Check if it's a flick gesture based on velocity
+                val FLICK_VELOCITY_THRESHOLD = 1000f
+                
+                if (abs(velocityX) > FLICK_VELOCITY_THRESHOLD) {
+                    coroutineScope.launch {
+                        if (velocityX > 0) {
+                            // Flick out (right)
+                            currentPatternIndex = (currentPatternIndex + 1) % vibrationPatterns.size
+                            providePatternSwitchFeedback()
+                        } else {
+                            // Flick in (left)
+                            currentPatternIndex = if (currentPatternIndex > 0) currentPatternIndex - 1 else vibrationPatterns.size - 1
+                            providePatternSwitchFeedback()
+                        }
+                    }
+                    return true
+                }
+                return false
+            }
+        })
+
+        // Override the window callback to intercept touch events
+        val originalCallback = window.callback
+        window.callback = object : Window.Callback by originalCallback {
+            override fun dispatchTouchEvent(event: MotionEvent): Boolean {
+                // Let the gesture detector try to handle it first
+                val consumed = gestureDetector.onTouchEvent(event)
+                // If the gesture detector didn't consume it, pass it to the original callback
+                return if (!consumed) {
+                    originalCallback.dispatchTouchEvent(event)
+                } else {
+                    true
+                }
+            }
+        }
+
         setContent {
-            WearApp(vibrator) { keepScreenOn ->
+            WearApp(
+                vibrator = vibrator,
+                currentPatternIndex = currentPatternIndex,
+                onPatternChange = { newIndex -> 
+                    currentPatternIndex = newIndex
+                }
+            ) { keepScreenOn ->
                 if (keepScreenOn) {
                     window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
                 } else {
@@ -104,19 +237,39 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        coroutineScope.cancel()
+    }
 }
 
 @Composable
-fun WearApp(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
+fun WearApp(
+    vibrator: Vibrator,
+    currentPatternIndex: Int,
+    onPatternChange: (Int) -> Unit,
+    onKeepScreenOn: (Boolean) -> Unit
+) {
     WearAppTheme {
         AppScaffold {
-            ListScreen(vibrator, onKeepScreenOn)
+            ListScreen(
+                vibrator = vibrator,
+                currentPatternIndex = currentPatternIndex,
+                onPatternChange = onPatternChange,
+                onKeepScreenOn = onKeepScreenOn
+            )
         }
     }
 }
 
 @Composable
-fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
+fun ListScreen(
+    vibrator: Vibrator,
+    currentPatternIndex: Int,
+    onPatternChange: (Int) -> Unit,
+    onKeepScreenOn: (Boolean) -> Unit
+) {
     var isVibrating by remember { mutableStateOf(false) }
     var isMotorActive by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
@@ -124,7 +277,6 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
     var spinnerIndex by remember { mutableStateOf(0) }
     var currentSpinnerType by remember { mutableStateOf(0) }
     var lastSpinnerType by remember { mutableStateOf(-1) }
-    var currentPatternIndex by remember { mutableStateOf(0) }
     var intensityMultiplier by remember { mutableStateOf(0.5f) }
 
     val rotaryScrollState = rememberScalingLazyListState()
@@ -164,9 +316,9 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
         }
     }
 
-    // Define vibration patterns
+    // Define vibration patterns with names
     val vibrationPatterns = listOf(
-        listOf( // Pattern One - Rhythmic
+        "One" to listOf( // Pattern One - Rhythmic
             Pair(100L, 50), // Quick, light tap
             Pair(200L, 120), // Medium, moderate intensity
             Pair(300L, 200), // Long, strong vibration
@@ -178,7 +330,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             Pair(75L, 220), // Quick, very strong
             Pair(350L, 70), // Long, gentle
         ),
-        listOf( // Pattern Two - Morse Code Style
+        "Morse" to listOf( // Pattern Two - Morse Code Style
             Pair(200L, 255), // Long strong
             Pair(100L, 150), // Short medium
             Pair(200L, 255), // Long strong
@@ -190,7 +342,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             Pair(100L, 150), // Short medium
             Pair(200L, 255), // Long strong
         ),
-        listOf( // Pattern Three - Twinkle Twinkle Little Star
+        "Twinkle" to listOf( // Pattern Three - Twinkle Twinkle Little Star
             Pair(200L, 200), // Twin-
             Pair(100L, 150), // -kle
             Pair(200L, 200), // twin-
@@ -199,7 +351,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             Pair(100L, 130), // -tle
             Pair(400L, 255), // star
         ),
-        listOf( // Pattern Four - Who Let The Dogs Out
+        "Dogs" to listOf( // Pattern Four - Who Let The Dogs Out
             Pair(200L, 255), // WHO
             Pair(150L, 200), // LET
             Pair(150L, 200), // THE
@@ -210,7 +362,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             Pair(150L, 255), // WOOF
             Pair(150L, 255), // WOOF
         ),
-        listOf( // Pattern Five - Random Chaos
+        "Chaos" to listOf( // Pattern Five - Random Chaos
             Pair(50L, 255), // Sudden strong zap
             Pair(300L, 80), // Long gentle hum
             Pair(25L, 200), // Tiny medium pulse
@@ -225,6 +377,30 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
             Pair(450L, 240), // Final strong fade
         ),
     )
+
+    // Function to provide vibration feedback for pattern switch
+    suspend fun providePatternSwitchFeedback() {
+        repeat(3) {
+            vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
+            delay(250) // Wait between vibrations
+        }
+    }
+
+    // Function to switch to next pattern
+    suspend fun switchToNextPattern() {
+        onPatternChange((currentPatternIndex + 1) % vibrationPatterns.size)
+        lastSpinnerType = currentSpinnerType
+        currentSpinnerType = getNextSpinnerType()
+        providePatternSwitchFeedback()
+    }
+
+    // Function to switch to previous pattern
+    suspend fun switchToPreviousPattern() {
+        onPatternChange(if (currentPatternIndex > 0) currentPatternIndex - 1 else vibrationPatterns.size - 1)
+        lastSpinnerType = currentSpinnerType
+        currentSpinnerType = getNextSpinnerType()
+        providePatternSwitchFeedback()
+    }
 
     Scaffold(
         timeText = { TimeText() },
@@ -241,7 +417,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                         val delta = if (dragAmount < 0) 0.05f else -0.05f
                         intensityMultiplier = (intensityMultiplier + delta).coerceIn(0f, 1f)
                     }
-                },
+                }
         ) {
             ScalingLazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -280,10 +456,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                                         isVibrating = true
                                         while (isVibrating) {
                                             // Play vibration pattern
-                                            for (
-                                            (duration, amplitude) in
-                                            vibrationPatterns[currentPatternIndex]
-                                            ) {
+                                            for ((duration, amplitude) in vibrationPatterns[currentPatternIndex].second) {
                                                 if (!isVibrating) break
                                                 // Apply intensity multiplier to amplitude
                                                 val adjustedAmplitude =
@@ -325,37 +498,42 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
 
                         Button(
                             onClick = {
-                                currentPatternIndex = (currentPatternIndex + 1) % vibrationPatterns.size
-                                // Change spinner type when pattern changes
-                                lastSpinnerType = currentSpinnerType
-                                currentSpinnerType = getNextSpinnerType()
-                                // If vibrating, restart with new pattern
-                                if (isVibrating) {
-                                    vibrationJob?.cancel()
-                                    vibrator.cancel()
-                                    vibrationJob = coroutineScope.launch {
-                                        while (isVibrating) {
-                                            for (
-                                            (duration, amplitude) in
-                                            vibrationPatterns[currentPatternIndex]
-                                            ) {
-                                                if (!isVibrating) break
-                                                val adjustedAmplitude =
-                                                    (amplitude * intensityMultiplier)
-                                                        .toInt()
-                                                        .coerceIn(1, 255)
-                                                isMotorActive = true
-                                                vibrator.vibrate(
-                                                    VibrationEffect.createOneShot(
-                                                        duration,
-                                                        adjustedAmplitude,
-                                                    ),
-                                                )
-                                                delay(duration) // Wait for the vibration to complete
-                                                isMotorActive = false
-                                                delay(100) // Add a small gap between vibrations
+                                coroutineScope.launch {
+                                    // Change pattern
+                                    onPatternChange((currentPatternIndex + 1) % vibrationPatterns.size)
+                                    // Change spinner type
+                                    lastSpinnerType = currentSpinnerType
+                                    currentSpinnerType = getNextSpinnerType()
+                                    // Provide feedback
+                                    repeat(3) {
+                                        vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
+                                        delay(250) // Wait between vibrations
+                                    }
+                                    // If vibrating, restart with new pattern
+                                    if (isVibrating) {
+                                        vibrationJob?.cancel()
+                                        vibrator.cancel()
+                                        vibrationJob = coroutineScope.launch {
+                                            while (isVibrating) {
+                                                for ((duration, amplitude) in vibrationPatterns[currentPatternIndex].second) {
+                                                    if (!isVibrating) break
+                                                    val adjustedAmplitude =
+                                                        (amplitude * intensityMultiplier)
+                                                            .toInt()
+                                                            .coerceIn(1, 255)
+                                                    isMotorActive = true
+                                                    vibrator.vibrate(
+                                                        VibrationEffect.createOneShot(
+                                                            duration,
+                                                            adjustedAmplitude,
+                                                        ),
+                                                    )
+                                                    delay(duration)
+                                                    isMotorActive = false
+                                                    delay(100)
+                                                }
+                                                delay(500)
                                             }
-                                            delay(500)
                                         }
                                     }
                                 }
@@ -375,7 +553,7 @@ fun ListScreen(vibrator: Vibrator, onKeepScreenOn: (Boolean) -> Unit) {
                 }
                 item {
                     Text(
-                        text = "Pattern ${currentPatternIndex + 1}",
+                        text = vibrationPatterns[currentPatternIndex].first,
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.caption1,
