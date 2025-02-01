@@ -20,12 +20,11 @@ plugins {
 }
 
 android {
+    namespace = "com.lophiid.pttrn"
     compileSdk = 35
 
-    namespace = "com.example.android.wearable.composestarter"
-
     defaultConfig {
-        applicationId = "com.example.android.wearable.composestarter"
+        applicationId = "com.lophiid.pttrn"
         minSdk = 26
         targetSdk = 34
         versionCode = 1
@@ -39,7 +38,7 @@ android {
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                "proguard-rules.pro",
             )
         }
     }

@@ -37,9 +37,10 @@
             android:value="true" />
 
         <activity
-            android:name=".presentation.MainActivity"
+            android:name="com.lophiid.pttrn.presentation.MainActivity"
             android:exported="true"
-            android:taskAffinity=".main">
+            android:label="@string/app_name"
+            android:theme="@android:style/Theme.DeviceDefault">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
