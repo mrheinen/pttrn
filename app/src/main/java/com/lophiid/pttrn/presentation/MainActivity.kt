@@ -383,11 +383,12 @@ fun ListScreen(
 ) {
     var isVibrating by remember { mutableStateOf(false) }
     var isMotorActive by remember { mutableStateOf(false) }
+    var intensityMultiplier by remember { mutableStateOf(1f) }
+    var isIntensityVisible by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var vibrationJob by remember { mutableStateOf<Job?>(null) }
     val spinnerIterator = remember { MainActivity.SpinnerPatternIterator() }
     val vibrationIterator = remember { MainActivity.VibrationPatternIterator() }
-    var intensityMultiplier by remember { mutableStateOf(0.5f) }
     var spinnerFrame by remember { mutableStateOf("") }
 
     // Effect to sync vibration iterator with pattern index
@@ -428,10 +429,13 @@ fun ListScreen(
                 .fillMaxSize()
                 .pointerInput(Unit) {
                     detectVerticalDragGestures { _, dragAmount ->
-                        // Negative dragAmount means swipe up, positive means swipe down
-                        // Scale the drag amount to make it less sensitive
                         val delta = if (dragAmount < 0) 0.05f else -0.05f
                         intensityMultiplier = (intensityMultiplier + delta).coerceIn(0f, 1f)
+                        coroutineScope.launch {
+                            isIntensityVisible = true
+                            delay(800) // Show for 800ms
+                            isIntensityVisible = false
+                        }
                     }
                 }
         ) {
@@ -458,7 +462,11 @@ fun ListScreen(
                         text = "${(intensityMultiplier * 100).toInt()}%",
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.caption2,
+                        style = TextStyle(
+                            fontSize = 24.sp,
+                            color = MaterialTheme.colors.primary
+                        ),
+                        color = if (isIntensityVisible) MaterialTheme.colors.primary else Color.Transparent
                     )
                 }
                 item {
