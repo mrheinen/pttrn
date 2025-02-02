@@ -449,11 +449,11 @@ fun ListScreen(
                         text = spinnerFrame,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 16.dp),
+                            .padding(vertical = 8.dp),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
                             fontSize = 50.sp,
-                            color = MaterialTheme.colors.primary
+                            color = MaterialTheme.colors.secondary
                         )
                     )
                 }
@@ -463,7 +463,7 @@ fun ListScreen(
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         style = TextStyle(
-                            fontSize = 24.sp,
+                            fontSize = 20.sp,
                             color = MaterialTheme.colors.primary
                         ),
                         color = if (isIntensityVisible) MaterialTheme.colors.primary else Color.Transparent
