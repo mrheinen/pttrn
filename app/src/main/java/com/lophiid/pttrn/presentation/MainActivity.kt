@@ -37,12 +37,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -56,7 +57,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.wear.compose.foundation.ExperimentalWearFoundationApi
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -67,7 +70,6 @@ import androidx.wear.compose.material.MaterialTheme
 import androidx.wear.compose.material.PositionIndicator
 import androidx.wear.compose.material.Scaffold
 import androidx.wear.compose.material.Text
-import androidx.wear.compose.material.TimeText
 import com.google.android.horologist.annotations.ExperimentalHorologistApi
 import com.google.android.horologist.compose.layout.AppScaffold
 import com.lophiid.pttrn.presentation.theme.WearAppTheme
@@ -96,67 +98,166 @@ class MainActivity : ComponentActivity() {
     private var currentPatternIndex by mutableStateOf(0)
     private var coroutineScope = CoroutineScope(Dispatchers.Main + Job())
 
-    // Define vibration patterns with names
-    private val vibrationPatterns = listOf(
-        "One" to listOf( // Pattern One - Rhythmic
-            Pair(100L, 50), // Quick, light tap
-            Pair(200L, 120), // Medium, moderate intensity
-            Pair(300L, 200), // Long, strong vibration
-            Pair(50L, 255), // Very short, maximum intensity
-            Pair(400L, 80), // Extended, gentle vibration
-            Pair(150L, 180), // Short, strong pulse
-            Pair(250L, 100), // Medium, moderate pulse
-            Pair(500L, 150), // Very long, medium-strong
-            Pair(75L, 220), // Quick, very strong
-            Pair(350L, 70), // Long, gentle
-        ),
-        "Morse" to listOf( // Pattern Two - Morse Code Style
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(50L, 100), // Quick light
-            Pair(50L, 100), // Quick light
-            Pair(50L, 100), // Quick light
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(200L, 255), // Long strong
-        ),
-        "Twinkle" to listOf( // Pattern Three - Twinkle Twinkle Little Star
-            Pair(200L, 200), // Twin-
-            Pair(100L, 150), // -kle
-            Pair(200L, 200), // twin-
-            Pair(100L, 150), // -kle
-            Pair(200L, 180), // lit-
-            Pair(100L, 130), // -tle
-            Pair(400L, 255), // star
-        ),
-        "Dogs" to listOf( // Pattern Four - Who Let The Dogs Out
-            Pair(200L, 255), // WHO
-            Pair(150L, 200), // LET
-            Pair(150L, 200), // THE
-            Pair(400L, 255), // DOGS
-            Pair(400L, 200), // OUT
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-        ),
-        "Chaos" to listOf( // Pattern Five - Random Chaos
-            Pair(50L, 255), // Sudden strong zap
-            Pair(300L, 80), // Long gentle hum
-            Pair(25L, 200), // Tiny medium pulse
-            Pair(400L, 255), // Extended strong buzz
-            Pair(75L, 130), // Quick light tap
-            Pair(200L, 180), // Medium balanced pulse
-            Pair(150L, 255), // Short strong burst
-            Pair(350L, 100), // Long soft wave
-            Pair(100L, 220), // Medium strong pop
-            Pair(250L, 160), // Moderate balanced pulse
-            Pair(125L, 90), // Short gentle touch
-            Pair(450L, 240), // Final strong fade
-        ),
-    )
+    // Interface for pattern providers
+    interface VibrationPatternProvider {
+        fun getPattern(): List<Pair<Long, Int>>
+        fun getKey(): String
+    }
+
+    // Static pattern provider
+    class StaticPatternProvider(
+        private val key: String,
+        private val pattern: List<Pair<Long, Int>>
+    ) : VibrationPatternProvider {
+        override fun getPattern() = pattern
+        override fun getKey() = key
+    }
+
+    // Random pattern provider example
+    class RandomPatternProvider(
+        private val length: Int,
+        private val name: String
+    ) : VibrationPatternProvider {
+        private var currentPattern: List<Pair<Long, Int>>? = null
+
+        override fun getPattern(): List<Pair<Long, Int>> {
+            if (currentPattern == null) {
+                currentPattern = List(length) {
+                    val duration = (20L..255L).random()
+                    val strength = (50..500).random()
+                    duration to strength
+                }
+            }
+            return currentPattern!!
+        }
+
+        fun generateNewPattern() {
+            currentPattern = null
+        }
+
+        override fun getKey() = name
+    }
+
+    // Iterator for vibration patterns
+    class VibrationPatternIterator {
+        private val patternProviders = mutableListOf<VibrationPatternProvider>()
+        var currentIndex = 0
+            private set
+        private val randomShortProvider = RandomPatternProvider(12, "Random Short")
+        private val randomNormalProvider = RandomPatternProvider(25, "Random Normal")
+        private val randomLongProvider = RandomPatternProvider(50, "Random Long")
+
+        init {
+            // Add random patterns first
+            patternProviders.add(randomShortProvider)
+            patternProviders.add(randomNormalProvider)
+            patternProviders.add(randomLongProvider)
+            
+            // Add static patterns
+            patternProviders.add(StaticPatternProvider("One", listOf(
+                100L to 50, 200L to 120, 300L to 200,
+                50L to 255, 400L to 80, 150L to 180,
+                250L to 100, 500L to 150, 75L to 220,
+                350L to 70
+            )))
+            patternProviders.add(StaticPatternProvider("Morse", listOf(
+                200L to 255, 100L to 150, 200L to 255,
+                100L to 150, 50L to 100, 50L to 100,
+                50L to 100, 200L to 255, 100L to 150,
+                200L to 255
+            )))
+            patternProviders.add(StaticPatternProvider("Twinkle", listOf(
+                200L to 200, 100L to 150, 200L to 200,
+                100L to 150, 200L to 180, 100L to 130,
+                400L to 255
+            )))
+            patternProviders.add(StaticPatternProvider("Dogs", listOf(
+                200L to 255, 150L to 200, 150L to 200,
+                400L to 255, 400L to 200, 150L to 255,
+                150L to 255, 150L to 255, 150L to 255
+            )))
+            patternProviders.add(StaticPatternProvider("Chaos", listOf(
+                50L to 255, 300L to 80, 25L to 200,
+                400L to 255, 75L to 130, 200L to 180,
+                150L to 255, 350L to 100, 100L to 220,
+                250L to 160, 125L to 90, 450L to 240
+            )))
+        }
+
+        fun getCurrentPattern(): List<Pair<Long, Int>> {
+            return patternProviders[currentIndex].getPattern()
+        }
+
+        fun getCurrentKey(): String {
+            return patternProviders[currentIndex].getKey()
+        }
+
+        fun next() {
+            val currentProvider = patternProviders[currentIndex]
+            currentIndex = (currentIndex + 1) % patternProviders.size
+            
+            // Generate new pattern if switching from any random pattern
+            when (currentProvider) {
+                is RandomPatternProvider -> currentProvider.generateNewPattern()
+            }
+        }
+
+        fun previous() {
+            val currentProvider = patternProviders[currentIndex]
+            currentIndex = if (currentIndex > 0) currentIndex - 1 else patternProviders.size - 1
+            
+            // Generate new pattern if switching from any random pattern
+            when (currentProvider) {
+                is RandomPatternProvider -> currentProvider.generateNewPattern()
+            }
+        }
+
+        fun size(): Int = patternProviders.size
+    }
+
+    // SpinnerPatternIterator class to manage spinner patterns
+    class SpinnerPatternIterator {
+        private val patterns = listOf(
+            listOf("⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"),
+            listOf("⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"),
+            listOf("⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓"),
+            listOf("⠄", "⠆", "⠇", "⠋", "⠙", "⠸", "⠰", "⠠", "⠰", "⠸", "⠙", "⠋", "⠇", "⠆"),
+            listOf("⠋", "⠙", "⠚", "⠒", "⠂", "⠂", "⠒", "⠲", "⠴", "⠦", "⠖", "⠒", "⠐", "⠐", "⠒", "⠓", "⠋"),
+            listOf("⠁", "⠉", "⠙", "⠚", "⠒", "⠂", "⠂", "⠒", "⠲", "⠴", "⠤", "⠄", "⠄", "⠤", "⠴", "⠲", "⠒", "⠂", "⠂", "⠒", "⠚", "⠙", "⠉", "⠁"),
+            listOf("⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"),
+            listOf(
+                "⢀⠀", "⡀⠀", "⠄⠀", "⢂⠀", "⡂⠀", "⠅⠀", "⢃⠀", "⡃⠀", "⠍⠀", "⢋⠀", "⡋⠀", "⠍⠁", "⢋⠁", 
+                "⡋⠁", "⠍⠉", "⠋⠉", "⠋⠉", "⠉⠙", "⠉⠙", "⠉⠩", "⠈⢙", "⠈⡙", "⢈⠩", "⡀⢙", "⠄⡙", "⢂⠩", 
+                "⡂⢘", "⠅⡘", "⢃⠨", "⡃⢐", "⠍⡐", "⢋⠠", "⡋⢀", "⠍⡁", "⢋⠁", "⡋⠁", "⠍⠉", "⠋⠉", "⠋⠉", 
+                "⠉⠙", "⠉⠙", "⠉⠩", "⠈⢙", "⠈⡙", "⠈⠩", "⠀⢙", "⠀⡙", "⠀⠩", "⠀⢘", "⠀⡘", "⠀⠨", "⠀⢐", 
+                "⠀⡐", "⠀⠠", "⠀⢀", "⠀⡀"
+            ),
+        )
+        var currentPatternIndex = 0
+            private set
+        var currentFrameIndex = 0
+            private set
+        private var lastPatternIndex = 0
+
+        fun getCurrentFrame(): String {
+            return patterns[currentPatternIndex][currentFrameIndex]
+        }
+
+        fun nextFrame() {
+            currentFrameIndex = (currentFrameIndex + 1) % patterns[currentPatternIndex].size
+        }
+
+        fun switchPattern() {
+            lastPatternIndex = currentPatternIndex
+            val availablePatterns = (0 until patterns.size).filter { it != lastPatternIndex }
+            currentPatternIndex = availablePatterns.random()
+            currentFrameIndex = 0
+        }
+
+        fun isValidPattern(): Boolean {
+            return currentPatternIndex in patterns.indices
+        }
+    }
 
     // Function to provide vibration feedback for pattern switch
     private suspend fun providePatternSwitchFeedback() {
@@ -192,11 +293,11 @@ class MainActivity : ComponentActivity() {
                     coroutineScope.launch {
                         if (velocityX > 0) {
                             // Flick out (right)
-                            currentPatternIndex = (currentPatternIndex + 1) % vibrationPatterns.size
+                            currentPatternIndex = (currentPatternIndex + 1) % VibrationPatternIterator().size()
                             providePatternSwitchFeedback()
                         } else {
                             // Flick in (left)
-                            currentPatternIndex = if (currentPatternIndex > 0) currentPatternIndex - 1 else vibrationPatterns.size - 1
+                            currentPatternIndex = if (currentPatternIndex > 0) currentPatternIndex - 1 else VibrationPatternIterator().size() - 1
                             providePatternSwitchFeedback()
                         }
                     }
@@ -222,17 +323,25 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
-            WearApp(
-                vibrator = vibrator,
-                currentPatternIndex = currentPatternIndex,
-                onPatternChange = { newIndex -> 
-                    currentPatternIndex = newIndex
-                }
-            ) { keepScreenOn ->
-                if (keepScreenOn) {
-                    window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                } else {
-                    window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+            WearAppTheme {
+                AppScaffold(
+                    timeText = { /* Remove time text */ }
+                ) {
+                    var currentPatternIndex by remember { mutableStateOf(0) }
+                    ListScreen(
+                        vibrator = vibrator,
+                        currentPatternIndex = currentPatternIndex,
+                        onPatternChange = { newIndex ->
+                            currentPatternIndex = newIndex
+                        },
+                        onKeepScreenOn = { keepOn ->
+                            if (keepOn) {
+                                window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            } else {
+                                window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+                            }
+                        }
+                    )
                 }
             }
         }
@@ -252,7 +361,9 @@ fun WearApp(
     onKeepScreenOn: (Boolean) -> Unit
 ) {
     WearAppTheme {
-        AppScaffold {
+        AppScaffold(
+            timeText = { /* Remove time text */ }
+        ) {
             ListScreen(
                 vibrator = vibrator,
                 currentPatternIndex = currentPatternIndex,
@@ -274,36 +385,29 @@ fun ListScreen(
     var isMotorActive by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var vibrationJob by remember { mutableStateOf<Job?>(null) }
-    var spinnerIndex by remember { mutableStateOf(0) }
-    var currentSpinnerType by remember { mutableStateOf(0) }
-    var lastSpinnerType by remember { mutableStateOf(-1) }
+    val spinnerIterator = remember { MainActivity.SpinnerPatternIterator() }
+    val vibrationIterator = remember { MainActivity.VibrationPatternIterator() }
     var intensityMultiplier by remember { mutableStateOf(0.5f) }
+    var spinnerFrame by remember { mutableStateOf("") }
 
-    val rotaryScrollState = rememberScalingLazyListState()
-
-    val spinnerPatterns = listOf(
-        listOf("⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"),
-        listOf("⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"),
-        listOf("⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓"),
-        listOf(
-            "( ●    )", "(  ●   )", "(   ●  )", "(    ● )", "(     ●)",
-            "(    ● )", "(   ●  )", "(  ●   )", "( ●    )", "(●     )",
-        ),
-        listOf("▸▹▹▹▹", "▹▸▹▹▹", "▹▹▸▹▹", "▹▹▹▸▹", "▹▹▹▹▸"),
-        listOf("_", "_", "_", "-", "`", "`", "'", "´", "-", "_", "_", "_"),
-    )
-
-    // Function to get next random spinner type different from last
-    fun getNextSpinnerType(): Int {
-        val availableTypes = (0 until spinnerPatterns.size).filter { it != lastSpinnerType }
-        spinnerIndex = 0 // Reset spinner index when changing pattern
-        return availableTypes.random()
+    // Effect to sync vibration iterator with pattern index
+    LaunchedEffect(currentPatternIndex) {
+        while (vibrationIterator.currentIndex != currentPatternIndex) {
+            if (currentPatternIndex > vibrationIterator.currentIndex) {
+                vibrationIterator.next()
+            } else {
+                vibrationIterator.previous()
+            }
+        }
     }
 
     // Spinner animation - always running
     LaunchedEffect(Unit) {
         while (true) {
-            spinnerIndex = (spinnerIndex + 1) % spinnerPatterns[currentSpinnerType].size
+            if (spinnerIterator.isValidPattern()) {
+                spinnerIterator.nextFrame()
+                spinnerFrame = spinnerIterator.getCurrentFrame()
+            }
             delay(150) // Control spinning speed
         }
     }
@@ -316,102 +420,14 @@ fun ListScreen(
         }
     }
 
-    // Define vibration patterns with names
-    val vibrationPatterns = listOf(
-        "One" to listOf( // Pattern One - Rhythmic
-            Pair(100L, 50), // Quick, light tap
-            Pair(200L, 120), // Medium, moderate intensity
-            Pair(300L, 200), // Long, strong vibration
-            Pair(50L, 255), // Very short, maximum intensity
-            Pair(400L, 80), // Extended, gentle vibration
-            Pair(150L, 180), // Short, strong pulse
-            Pair(250L, 100), // Medium, moderate pulse
-            Pair(500L, 150), // Very long, medium-strong
-            Pair(75L, 220), // Quick, very strong
-            Pair(350L, 70), // Long, gentle
-        ),
-        "Morse" to listOf( // Pattern Two - Morse Code Style
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(50L, 100), // Quick light
-            Pair(50L, 100), // Quick light
-            Pair(50L, 100), // Quick light
-            Pair(200L, 255), // Long strong
-            Pair(100L, 150), // Short medium
-            Pair(200L, 255), // Long strong
-        ),
-        "Twinkle" to listOf( // Pattern Three - Twinkle Twinkle Little Star
-            Pair(200L, 200), // Twin-
-            Pair(100L, 150), // -kle
-            Pair(200L, 200), // twin-
-            Pair(100L, 150), // -kle
-            Pair(200L, 180), // lit-
-            Pair(100L, 130), // -tle
-            Pair(400L, 255), // star
-        ),
-        "Dogs" to listOf( // Pattern Four - Who Let The Dogs Out
-            Pair(200L, 255), // WHO
-            Pair(150L, 200), // LET
-            Pair(150L, 200), // THE
-            Pair(400L, 255), // DOGS
-            Pair(400L, 200), // OUT
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-            Pair(150L, 255), // WOOF
-        ),
-        "Chaos" to listOf( // Pattern Five - Random Chaos
-            Pair(50L, 255), // Sudden strong zap
-            Pair(300L, 80), // Long gentle hum
-            Pair(25L, 200), // Tiny medium pulse
-            Pair(400L, 255), // Extended strong buzz
-            Pair(75L, 130), // Quick light tap
-            Pair(200L, 180), // Medium balanced pulse
-            Pair(150L, 255), // Short strong burst
-            Pair(350L, 100), // Long soft wave
-            Pair(100L, 220), // Medium strong pop
-            Pair(250L, 160), // Moderate balanced pulse
-            Pair(125L, 90), // Short gentle touch
-            Pair(450L, 240), // Final strong fade
-        ),
-    )
-
-    // Function to provide vibration feedback for pattern switch
-    suspend fun providePatternSwitchFeedback() {
-        repeat(3) {
-            vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
-            delay(250) // Wait between vibrations
-        }
-    }
-
-    // Function to switch to next pattern
-    suspend fun switchToNextPattern() {
-        onPatternChange((currentPatternIndex + 1) % vibrationPatterns.size)
-        lastSpinnerType = currentSpinnerType
-        currentSpinnerType = getNextSpinnerType()
-        providePatternSwitchFeedback()
-    }
-
-    // Function to switch to previous pattern
-    suspend fun switchToPreviousPattern() {
-        onPatternChange(if (currentPatternIndex > 0) currentPatternIndex - 1 else vibrationPatterns.size - 1)
-        lastSpinnerType = currentSpinnerType
-        currentSpinnerType = getNextSpinnerType()
-        providePatternSwitchFeedback()
-    }
-
     Scaffold(
-        timeText = { TimeText() },
-        positionIndicator = { PositionIndicator(scalingLazyListState = rotaryScrollState) },
+        positionIndicator = { PositionIndicator(scalingLazyListState = rememberScalingLazyListState()) },
     ) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .pointerInput(Unit) {
-                    detectVerticalDragGestures { change, dragAmount ->
-                        change.consume()
+                    detectVerticalDragGestures { _, dragAmount ->
                         // Negative dragAmount means swipe up, positive means swipe down
                         // Scale the drag amount to make it less sensitive
                         val delta = if (dragAmount < 0) 0.05f else -0.05f
@@ -421,23 +437,25 @@ fun ListScreen(
         ) {
             ScalingLazyColumn(
                 modifier = Modifier.fillMaxSize(),
-                state = rotaryScrollState,
+                state = rememberScalingLazyListState(),
                 userScrollEnabled = false,
             ) {
                 item {
                     Text(
-                        text = spinnerPatterns[currentSpinnerType][spinnerIndex],
+                        text = spinnerFrame,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .padding(vertical = 16.dp),
                         textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.title1,
-                        color = if (isMotorActive) Color(0xFF98971a) else Color(0xFF98971a).copy(alpha = 0.6f),
+                        style = TextStyle(
+                            fontSize = 50.sp,
+                            color = MaterialTheme.colors.primary
+                        )
                     )
                 }
                 item {
                     Text(
-                        text = "Intensity: ${(intensityMultiplier * 100).toInt()}%",
+                        text = "${(intensityMultiplier * 100).toInt()}%",
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.caption2,
@@ -454,9 +472,10 @@ fun ListScreen(
                                     onKeepScreenOn(true)
                                     vibrationJob = coroutineScope.launch {
                                         isVibrating = true
+                                        val currentPattern = vibrationIterator.getCurrentPattern()
+
                                         while (isVibrating) {
-                                            // Play vibration pattern
-                                            for ((duration, amplitude) in vibrationPatterns[currentPatternIndex].second) {
+                                            for ((duration, amplitude) in currentPattern) {
                                                 if (!isVibrating) break
                                                 // Apply intensity multiplier to amplitude
                                                 val adjustedAmplitude =
@@ -491,7 +510,7 @@ fun ListScreen(
                             ),
                         ) {
                             Icon(
-                                imageVector = if (isVibrating) Icons.Default.Close else Icons.Default.PlayArrow,
+                                imageVector = if (isVibrating) Icons.Filled.Close else Icons.Filled.PlayArrow,
                                 contentDescription = if (isVibrating) "Stop Vibration" else "Start Vibration",
                             )
                         }
@@ -500,10 +519,10 @@ fun ListScreen(
                             onClick = {
                                 coroutineScope.launch {
                                     // Change pattern
-                                    onPatternChange((currentPatternIndex + 1) % vibrationPatterns.size)
+                                    vibrationIterator.next()
+                                    onPatternChange(vibrationIterator.currentIndex)
                                     // Change spinner type
-                                    lastSpinnerType = currentSpinnerType
-                                    currentSpinnerType = getNextSpinnerType()
+                                    spinnerIterator.switchPattern()
                                     // Provide feedback
                                     repeat(3) {
                                         vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
@@ -515,7 +534,8 @@ fun ListScreen(
                                         vibrator.cancel()
                                         vibrationJob = coroutineScope.launch {
                                             while (isVibrating) {
-                                                for ((duration, amplitude) in vibrationPatterns[currentPatternIndex].second) {
+                                                val currentPattern = vibrationIterator.getCurrentPattern()
+                                                for ((duration, amplitude) in currentPattern) {
                                                     if (!isVibrating) break
                                                     val adjustedAmplitude =
                                                         (amplitude * intensityMultiplier)
@@ -545,7 +565,7 @@ fun ListScreen(
                             ),
                         ) {
                             Icon(
-                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                imageVector = Icons.Filled.ArrowForward,
                                 contentDescription = "Next Pattern",
                             )
                         }
@@ -553,13 +573,35 @@ fun ListScreen(
                 }
                 item {
                     Text(
-                        text = vibrationPatterns[currentPatternIndex].first,
+                        text = vibrationIterator.getCurrentKey(),
                         modifier = Modifier.fillMaxWidth(),
                         textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.caption1,
                     )
                 }
             }
+        }
+    }
+
+    // Function to switch to next pattern
+    suspend fun switchToNextPattern() {
+        vibrationIterator.next()
+        onPatternChange(vibrationIterator.currentIndex)
+        spinnerIterator.switchPattern()
+        repeat(3) {
+            vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
+            delay(250) // Wait between vibrations
+        }
+    }
+
+    // Function to switch to previous pattern
+    suspend fun switchToPreviousPattern() {
+        vibrationIterator.previous()
+        onPatternChange(vibrationIterator.currentIndex)
+        spinnerIterator.switchPattern()
+        repeat(3) {
+            vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
+            delay(250) // Wait between vibrations
         }
     }
 }
