@@ -12,7 +12,7 @@
      limitations under the License.
 -->
 <resources>
-    <string name="app_name">ComposeStarter</string>
+    <string name="app_name">PTTRN</string>
 
     <string name="hello_world">Vibe and chill?</string>
 </resources>

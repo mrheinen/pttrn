@@ -433,7 +433,7 @@ fun ListScreen(
                         intensityMultiplier = (intensityMultiplier + delta).coerceIn(0f, 1f)
                         coroutineScope.launch {
                             isIntensityVisible = true
-                            delay(800) // Show for 800ms
+                            delay(1000) // Show for 800ms
                             isIntensityVisible = false
                         }
                     }
@@ -464,9 +464,9 @@ fun ListScreen(
                         textAlign = TextAlign.Center,
                         style = TextStyle(
                             fontSize = 20.sp,
-                            color = MaterialTheme.colors.primary
+                            color = Color(0xFFd65d0e)
                         ),
-                        color = if (isIntensityVisible) MaterialTheme.colors.primary else Color.Transparent
+                        color = if (isIntensityVisible) Color(0xFFd65d0e) else Color.Transparent
                     )
                 }
                 item {
