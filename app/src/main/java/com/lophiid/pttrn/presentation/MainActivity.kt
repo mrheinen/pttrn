@@ -23,6 +23,7 @@ import android.os.Bundle
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import android.view.GestureDetector
 import android.view.GestureDetector.SimpleOnGestureListener
 import android.view.MotionEvent
@@ -100,14 +101,20 @@ class MainActivity : ComponentActivity() {
 
     // Interface for pattern providers
     interface VibrationPatternProvider {
-        fun getPattern(): List<Pair<Long, Int>>
+        fun getPattern(): List<VibrationStep>
         fun getKey(): String
     }
+
+    data class VibrationStep(
+        val duration: Long,
+        val amplitude: Int,
+        val pauseDuration: Long = 100L
+    )
 
     // Static pattern provider
     class StaticPatternProvider(
         private val key: String,
-        private val pattern: List<Pair<Long, Int>>
+        private val pattern: List<VibrationStep>
     ) : VibrationPatternProvider {
         override fun getPattern() = pattern
         override fun getKey() = key
@@ -118,14 +125,15 @@ class MainActivity : ComponentActivity() {
         private val length: Int,
         private val name: String
     ) : VibrationPatternProvider {
-        private var currentPattern: List<Pair<Long, Int>>? = null
+        private var currentPattern: List<VibrationStep>? = null
 
-        override fun getPattern(): List<Pair<Long, Int>> {
+        override fun getPattern(): List<VibrationStep> {
             if (currentPattern == null) {
                 currentPattern = List(length) {
-                    val duration = (20L..255L).random()
-                    val strength = (50..500).random()
-                    duration to strength
+                    val duration = (100L..500L).random()
+                    val strength = (30..250).random()
+                    val pauseDuration = (20L..500L).random()
+                    VibrationStep(duration, strength, pauseDuration)
                 }
             }
             return currentPattern!!
@@ -155,36 +163,37 @@ class MainActivity : ComponentActivity() {
             
             // Add static patterns
             patternProviders.add(StaticPatternProvider("One", listOf(
-                100L to 50, 200L to 120, 300L to 200,
-                50L to 255, 400L to 80, 150L to 180,
-                250L to 100, 500L to 150, 75L to 220,
-                350L to 70
+                VibrationStep(100L, 50, 100L), VibrationStep(200L, 120, 200L), VibrationStep(300L, 200, 300L),
+                VibrationStep(50L, 255, 50L), VibrationStep(400L, 80, 400L), VibrationStep(150L, 180, 150L),
+                VibrationStep(250L, 100, 250L), VibrationStep(500L, 150, 500L), VibrationStep(75L, 220, 75L),
+                VibrationStep(350L, 70, 350L)
             )))
             patternProviders.add(StaticPatternProvider("Morse", listOf(
-                200L to 255, 100L to 150, 200L to 255,
-                100L to 150, 50L to 100, 50L to 100,
-                50L to 100, 200L to 255, 100L to 150,
-                200L to 255
+                VibrationStep(200L, 255, 200L), VibrationStep(100L, 150, 100L), VibrationStep(200L, 255, 200L),
+                VibrationStep(100L, 150, 100L), VibrationStep(50L, 100, 50L), VibrationStep(50L, 100, 50L),
+                VibrationStep(50L, 100, 50L), VibrationStep(200L, 255, 200L), VibrationStep(100L, 150, 100L),
+                VibrationStep(200L, 255, 200L)
             )))
             patternProviders.add(StaticPatternProvider("Twinkle", listOf(
-                200L to 200, 100L to 150, 200L to 200,
-                100L to 150, 200L to 180, 100L to 130,
-                400L to 255
+                VibrationStep(200L, 200, 200L), VibrationStep(100L, 150, 100L), VibrationStep(200L, 200, 200L),
+                VibrationStep(100L, 150, 100L), VibrationStep(200L, 180, 200L), VibrationStep(100L, 130, 100L),
+                VibrationStep(400L, 255, 400L)
             )))
             patternProviders.add(StaticPatternProvider("Dogs", listOf(
-                200L to 255, 150L to 200, 150L to 200,
-                400L to 255, 400L to 200, 150L to 255,
-                150L to 255, 150L to 255, 150L to 255
+                VibrationStep(200L, 255, 200L), VibrationStep(150L, 200, 150L), VibrationStep(150L, 200, 150L),
+                VibrationStep(400L, 255, 400L), VibrationStep(400L, 200, 400L), VibrationStep(150L, 255, 150L),
+                VibrationStep(150L, 255, 150L), VibrationStep(150L, 255, 150L), VibrationStep(150L, 255, 150L)
             )))
             patternProviders.add(StaticPatternProvider("Chaos", listOf(
-                50L to 255, 300L to 80, 25L to 200,
-                400L to 255, 75L to 130, 200L to 180,
-                150L to 255, 350L to 100, 100L to 220,
-                250L to 160, 125L to 90, 450L to 240
+                VibrationStep(50L, 255, 50L), VibrationStep(300L, 80, 300L), VibrationStep(25L, 200, 25L),
+                VibrationStep(400L, 255, 400L), VibrationStep(75L, 130, 75L), VibrationStep(200L, 180, 200L),
+                VibrationStep(150L, 255, 150L), VibrationStep(350L, 100, 350L), VibrationStep(100L, 220, 100L),
+                VibrationStep(250L, 160, 250L), VibrationStep(125L, 90, 125L), VibrationStep(450L, 240, 450L)
             )))
+            // Add random pattern providers
         }
 
-        fun getCurrentPattern(): List<Pair<Long, Int>> {
+        fun getCurrentPattern(): List<VibrationStep> {
             return patternProviders[currentIndex].getPattern()
         }
 
@@ -221,10 +230,8 @@ class MainActivity : ComponentActivity() {
             listOf("⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"),
             listOf("⣷", "⣯", "⣟", "⡿", "⢿", "⣻", "⣽", "⣾"),
             listOf("⠋", "⠙", "⠚", "⠞", "⠖", "⠦", "⠴", "⠲", "⠳", "⠓"),
-            listOf("⠄", "⠆", "⠇", "⠋", "⠙", "⠸", "⠰", "⠠", "⠰", "⠸", "⠙", "⠋", "⠇", "⠆"),
             listOf("⠋", "⠙", "⠚", "⠒", "⠂", "⠂", "⠒", "⠲", "⠴", "⠦", "⠖", "⠒", "⠐", "⠐", "⠒", "⠓", "⠋"),
             listOf("⠁", "⠉", "⠙", "⠚", "⠒", "⠂", "⠂", "⠒", "⠲", "⠴", "⠤", "⠄", "⠄", "⠤", "⠴", "⠲", "⠒", "⠂", "⠂", "⠒", "⠚", "⠙", "⠉", "⠁"),
-            listOf("⢄", "⢂", "⢁", "⡁", "⡈", "⡐", "⡠"),
             listOf(
                 "⢀⠀", "⡀⠀", "⠄⠀", "⢂⠀", "⡂⠀", "⠅⠀", "⢃⠀", "⡃⠀", "⠍⠀", "⢋⠀", "⡋⠀", "⠍⠁", "⢋⠁", 
                 "⡋⠁", "⠍⠉", "⠋⠉", "⠋⠉", "⠉⠙", "⠉⠙", "⠉⠩", "⠈⢙", "⠈⡙", "⢈⠩", "⡀⢙", "⠄⡙", "⢂⠩", 
@@ -263,7 +270,6 @@ class MainActivity : ComponentActivity() {
     private suspend fun providePatternSwitchFeedback() {
         repeat(3) {
             vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
-            delay(250) // Wait between vibrations
         }
     }
 
@@ -276,6 +282,14 @@ class MainActivity : ComponentActivity() {
         } else {
             @Suppress("DEPRECATION")
             getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
+        }
+
+        // Check if vibrator is available and working
+        if (vibrator.hasVibrator()) {
+            // Test vibration to ensure it's working
+            vibrator.vibrate(VibrationEffect.createOneShot(200L, VibrationEffect.DEFAULT_AMPLITUDE))
+        } else {
+            Log.e("MainActivity", "No vibrator available on this device")
         }
 
         // Initialize the gesture detector
@@ -383,7 +397,7 @@ fun ListScreen(
 ) {
     var isVibrating by remember { mutableStateOf(false) }
     var isMotorActive by remember { mutableStateOf(false) }
-    var intensityMultiplier by remember { mutableStateOf(1f) }
+    var intensityMultiplier by remember { mutableStateOf(0.5f) }
     var isIntensityVisible by remember { mutableStateOf(false) }
     val coroutineScope = rememberCoroutineScope()
     var vibrationJob by remember { mutableStateOf<Job?>(null) }
@@ -483,23 +497,22 @@ fun ListScreen(
                                         val currentPattern = vibrationIterator.getCurrentPattern()
 
                                         while (isVibrating) {
-                                            for ((duration, amplitude) in currentPattern) {
+                                            for (step in currentPattern) {
                                                 if (!isVibrating) break
                                                 // Apply intensity multiplier to amplitude
                                                 val adjustedAmplitude =
-                                                    (amplitude * intensityMultiplier)
+                                                    (step.amplitude * intensityMultiplier)
                                                         .toInt()
                                                         .coerceIn(1, 255)
                                                 isMotorActive = true
                                                 vibrator.vibrate(
                                                     VibrationEffect.createOneShot(
-                                                        duration,
+                                                        step.duration,
                                                         adjustedAmplitude,
                                                     ),
                                                 )
-                                                delay(duration) // Wait for the vibration to complete
                                                 isMotorActive = false
-                                                delay(100) // Add a small gap between vibrations
+                                                delay(step.pauseDuration) // Add the configured gap between vibrations
                                             }
                                             delay(500) // Pause before repeating the sequence
                                         }
@@ -534,7 +547,6 @@ fun ListScreen(
                                     // Provide feedback
                                     repeat(3) {
                                         vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
-                                        delay(250) // Wait between vibrations
                                     }
                                     // If vibrating, restart with new pattern
                                     if (isVibrating) {
@@ -543,24 +555,24 @@ fun ListScreen(
                                         vibrationJob = coroutineScope.launch {
                                             while (isVibrating) {
                                                 val currentPattern = vibrationIterator.getCurrentPattern()
-                                                for ((duration, amplitude) in currentPattern) {
+                                                for (step in currentPattern) {
                                                     if (!isVibrating) break
                                                     val adjustedAmplitude =
-                                                        (amplitude * intensityMultiplier)
+                                                        (step.amplitude * intensityMultiplier)
                                                             .toInt()
                                                             .coerceIn(1, 255)
                                                     isMotorActive = true
                                                     vibrator.vibrate(
                                                         VibrationEffect.createOneShot(
-                                                            duration,
-                                                            adjustedAmplitude,
+                                                            step.duration,
+                                                            if (adjustedAmplitude < 10) VibrationEffect.DEFAULT_AMPLITUDE else adjustedAmplitude,
                                                         ),
                                                     )
-                                                    delay(duration)
+                                                    delay(step.duration)
                                                     isMotorActive = false
-                                                    delay(100)
+                                                    delay(step.pauseDuration) // Add the configured gap between vibrations
                                                 }
-                                                delay(500)
+                                                delay(100) // Pause before repeating the sequence
                                             }
                                         }
                                     }
@@ -598,7 +610,6 @@ fun ListScreen(
         spinnerIterator.switchPattern()
         repeat(3) {
             vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
-            delay(250) // Wait between vibrations
         }
     }
 
@@ -609,7 +620,6 @@ fun ListScreen(
         spinnerIterator.switchPattern()
         repeat(3) {
             vibrator.vibrate(VibrationEffect.createOneShot(200L, 128))
-            delay(250) // Wait between vibrations
         }
     }
 }
