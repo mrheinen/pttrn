@@ -1,6 +1,10 @@
 # Pttrn
 
-A mindful pattern recognition app designed to provide a calming and engaging experience for neurodivergent individuals and anyone seeking a moment of focus and tranquility. The app vibrates random or predefined patterns which you can focus on with the goal of recognizing the pattern or parts of the pattern. 
+![Screenshot](./screenshot.png)
+
+A mindful pattern recognition app designed to provide a calming and engaging experience for neurodivergent individuals and anyone seeking a moment of focus and tranquility. The app vibrates random or predefined patterns which you can focus on with the goal of recognizing the pattern or parts of the pattern.
+
+The goal was to create a simple and intuitive experience for the user but if you feel some features are missing or could be better, please let me know!
 
 ## About
 
