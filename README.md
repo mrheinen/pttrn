@@ -1,59 +1,38 @@
-Compose for Wear OS Starter Sample
-==================================
-Demonstrates a simple "Hello, World" starter project for using Compose with Wear OS.
+# Pttrn
 
-Introduction
-------------
+A mindful pattern recognition app designed to provide a calming and engaging experience for neurodivergent individuals and anyone seeking a moment of focus and tranquility. The app vibrates random or predefined patterns which you can focus on with the goal of recognizing the pattern or parts of the pattern. 
 
-Simple "Hello, World" app meant as a starting point for a new project using
-Compose for Wear OS.
+## About
 
-Displays a centered [Text] composable and a list built with [Horologist][horologist].
+Pttrn is a unique Android application that combines the power of pattern recognition with therapeutic benefits. Primarily designed for individuals on the autism spectrum, this app offers an interactive space to engage with vibration patterns in a way that can help:
 
-For more information on composable options in Compose for Wear OS, check out our
-[documentation][documentation].
+- Provide a calming activity during stressful situations
+- Create an engaging focus point when feeling overwhelmed
+- Offer a fun and relaxing way to exercise pattern recognition skills
+- Serve as a mindfulness tool for anxiety management
 
-Screenshots
------------
+## Usage
 
-<img src="app/src/test/screenshots/GreetingScreenTest_pixel_watch.png" height="384" alt="Round Screenshot"/>
+Open the app and select a pattern to start with. The random patterns are truly randomized and therefore more challenging than the other predefined patterns.  Swipe up and down to increase or decrease the intensity of the vibrations.
 
+## Development Note
 
-Getting Started
----------------
+This application was developed with significant assistance from AI technology, which has contributed to both its innovative features and some of its unique implementation approaches. While this AI-assisted development has allowed us to create something special, you might notice some quirks in the code structure - these are part of what makes Pttrn unique!
 
-This sample uses the Gradle build system. To build this project,
-use the "gradlew build" command or use "Import Project" in Android Studio.
+## Features
 
-Designing for different display sizes
--------------------------------------
+- Interactive pattern recognition exercises
+- Calming visual interfaces
+- Simple, intuitive user interface designed for accessibility
 
-This sample demonstrates two techniques for helping you design for different display sizes:
+## Target Audience
 
-1.  Compose [`WearPreviewDevices`][wear-preview-devices] and [`WearPreviewFontScales`][wear-preview-font-scales] annotations: These generate a set of previews in the preview pane within Android Studio, for a range of different screen sizes and font display size settings, allowing you to see how your design would look.
+- Individuals on the autism spectrum looking for a calming activity
+- People with anxiety who need a focusing tool
+- Anyone who enjoys pattern recognition as a form of relaxation
+- Those seeking a mindful activity for stress relief
 
-2.  Screenshot tests: This sample also demonstrates screenshot testing, for a set of [defined devices][wear-device]. For more information on screenshot testing, see this talk from [droidcon London][droidcon-talk], and see the [Continuous Integration][ci-guide] for more details on how to build screenshot
-    testing into your automated workflows.
+## Contributing
 
-    - To generate new images for the tests, run `./gradlew recordRoborazziDebug`
-    - To test against existing reference images, run `./gradlew verifyRoborazziDebug`
-  
-Together, this allows you to check for any unexpected visual changes to your UI, across a range of device sizes.
+We welcome contributions to make Pttrn even better! Whether you're fixing bugs, improving documentation, or adding new features, please feel free to submit a pull request.
 
-Support
--------
-
-- Stack Overflow: https://stackoverflow.com/questions/tagged/wear-os
-
-If you've found an error in this sample, please [create an issue](https://github.com/android/wear-os-samples/issues/new).
-
-Patches are encouraged, and may be submitted by forking this project and
-submitting a pull request through GitHub. Please see CONTRIBUTING.md for more details.
-
-[documentation]: https://developer.android.com/reference/kotlin/androidx/wear/compose/material/package-summary.html
-[horologist]: https://github.com/google/horologist
-[droidcon-talk]: https://www.droidcon.com/2023/11/15/easy-screenshot-testing-with-compose/
-[wear-device]: https://github.com/android/wear-os-samples/blob/main/ComposeStarter/app/src/test/java/presentation/WearDevice.kt
-[wear-preview-font-scales]: https://developer.android.com/reference/kotlin/androidx/wear/compose/ui/tooling/preview/WearPreviewFontScales
-[wear-preview-devices]: https://developer.android.com/reference/kotlin/androidx/wear/compose/ui/tooling/preview/WearPreviewDevices
-[ci-guide]: https://developer.android.com/training/testing/continuous-integration
